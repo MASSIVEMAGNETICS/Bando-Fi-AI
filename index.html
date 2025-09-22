@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bando-Fi AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --background-color: #000000;
+        --surface-color: #0a0a0a;
+        --primary-color: #39ff14; /* lime green */
+        --secondary-color: #ff00ff; /* pink */
+        --on-background-color: #e0e0e0;
+        --on-surface-color: #c0c0c0;
+        --error-color: #ff4141;
+        --border-color: #39ff14;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: var(--background-color);
+        color: var(--on-background-color);
+        font-family: 'Roboto', sans-serif;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-image: 
+            linear-gradient(rgba(57, 255, 20, 0.07) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(57, 255, 20, 0.07) 1px, transparent 1px);
+        background-size: 25px 25px;
+      }
+      
+      h1, h2, h3, h4, button, select {
+        font-family: 'Orbitron', sans-serif;
+        text-transform: uppercase;
+      }
+
+      #root {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.11.0",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
