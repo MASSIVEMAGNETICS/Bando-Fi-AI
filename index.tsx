@@ -9,7 +9,7 @@ interface SessionGalleryItem {
     date: Date;
     name: string;
     tags: string[];
-    type: 'blend' | 'swap' | 'inpaint' | 'video' | 'style' | 'audio';
+    type: 'blend' | 'swap' | 'inpaint' | 'video' | 'style' | 'audio' | 'genesis';
     aspectRatio: string;
 }
 
@@ -563,11 +563,266 @@ const AudioControls = ({ styles, audioPrompt, setAudioPrompt, handleEnhancePromp
     </div>
 );
 
+function isPrime(num: number) {
+    for(let i = 2, s = Math.sqrt(num); i <= s; i++)
+        if(num % i === 0) return false;
+    return num > 1;
+}
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+    s /= 100;
+    l /= 100;
+    let c = (1 - Math.abs(2 * l - 1)) * s;
+    let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+    let m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+
+    if (0 <= h && h < 60) { r = c; g = x; b = 0; }
+    else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
+    else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
+    else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
+    else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
+    else if (300 <= h && h < 360) { r = c; g = 0; b = x; }
+    r = Math.round((r + m) * 255);
+    g = Math.round((g + m) * 255);
+    b = Math.round((b + m) * 255);
+
+    return [r, g, b];
+}
+
+function getNextPrime(num: number) {
+    while(true) {
+        num++;
+        if(isPrime(num)) return num;
+    }
+}
+function getPrevPrime(num: number) {
+    while(true) {
+        num--;
+        if(isPrime(num)) return num;
+    }
+}
+
+const GenesisEngineControls = React.forwardRef(({ styles, genesisPrompt, setGenesisPrompt, handleEnhancePrompt, isEnhancing, useGoldenRatio, setUseGoldenRatio }: { styles: { [key: string]: React.CSSProperties }, genesisPrompt: string, setGenesisPrompt: (p: string) => void, handleEnhancePrompt: (p: string, s: any, c: string) => void, isEnhancing: boolean, useGoldenRatio: boolean, setUseGoldenRatio: (u: boolean) => void }, ref) => {
+    const { mandelbrotRef, compositionRef } = ref as { mandelbrotRef: React.Ref<HTMLCanvasElement>, compositionRef: React.Ref<HTMLCanvasElement> };
+    const [rValue, setRValue] = useState(3.9);
+    const [palette, setPalette] = useState<[number, number, number][]>([]);
+    const [primeCount, setPrimeCount] = useState(7);
+    const maxIter = 150;
+
+    const generateChaosPalette = useCallback(() => {
+        const newPalette: [number, number, number][] = [];
+        let x = 0.5; // Initial value for logistic map
+
+        // "Warm up" the logistic map
+        for (let i = 0; i < 100; i++) {
+            x = rValue * x * (1 - x);
+        }
+
+        for (let i = 0; i < maxIter; i++) {
+            x = rValue * x * (1 - x);
+            const hue = Math.floor(x * 360);
+            const saturation = 70 + Math.floor(x * 30);
+            const lightness = 50;
+            newPalette.push(hslToRgb(hue, saturation, lightness));
+        }
+        setPalette(newPalette);
+    }, [rValue, maxIter]);
+
+    // Generate initial palette
+    useEffect(() => {
+        generateChaosPalette();
+    }, [generateChaosPalette]);
+
+    // Redraw Mandelbrot when palette changes
+    useEffect(() => {
+        if (palette.length === 0) return;
+
+        const canvas = (mandelbrotRef as React.RefObject<HTMLCanvasElement>).current;
+        const ctx = canvas?.getContext('2d');
+        if (!canvas || !ctx) return;
+
+        const width = canvas.width;
+        const height = canvas.height;
+
+        const imageData = ctx.createImageData(width, height);
+        const data = imageData.data;
+
+        for (let x = 0; x < width; x++) {
+            for (let y = 0; y < height; y++) {
+                let zx = 1.5 * (x - width / 2) / (0.5 * width);
+                let zy = (y - height / 2) / (0.5 * height);
+
+                let zx_iter = 0;
+                let zy_iter = 0;
+                const cx = zx;
+                const cy = zy;
+
+                let iter = 0;
+                while (zx_iter * zx_iter + zy_iter * zy_iter < 4 && iter < maxIter) {
+                    const xtemp = zx_iter * zx_iter - zy_iter * zy_iter + cx;
+                    zy_iter = 2 * zx_iter * zy_iter + cy;
+                    zx_iter = xtemp;
+                    iter++;
+                }
+
+                const pixelIndex = (y * width + x) * 4;
+                if (iter === maxIter) {
+                    data[pixelIndex] = 0; data[pixelIndex + 1] = 0; data[pixelIndex + 2] = 0; data[pixelIndex + 3] = 255;
+                } else {
+                    const color = palette[iter];
+                    data[pixelIndex] = color[0];
+                    data[pixelIndex + 1] = color[1];
+                    data[pixelIndex + 2] = color[2];
+                    data[pixelIndex + 3] = 255;
+                }
+            }
+        }
+        ctx.putImageData(imageData, 0, 0);
+
+    }, [palette, maxIter]);
+
+    useEffect(() => {
+        const canvas = (compositionRef as React.RefObject<HTMLCanvasElement>).current;
+        const ctx = canvas?.getContext('2d');
+        if (!canvas || !ctx) return;
+
+        const width = canvas.width;
+        const height = canvas.height;
+        ctx.clearRect(0, 0, width, height);
+
+        // Simple LCG pseudo-random number generator, seeded with primeCount
+        let seed = primeCount;
+        const random = () => {
+            seed = (seed * 1664525 + 1013904223) % 4294967296;
+            return seed / 4294967296;
+        };
+
+        ctx.strokeStyle = 'rgba(57, 255, 20, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.fillStyle = 'rgba(57, 255, 20, 0.2)';
+
+        for (let i = 0; i < primeCount; i++) {
+            const x = random() * width;
+            const y = random() * height;
+            const radius = (random() * 20) + 5; // Radius between 5 and 25
+
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.fill();
+        }
+    }, [primeCount]);
+
+    return (
+        <div style={{display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
+            <h2 style={styles.sectionTitle}>1. Fractal & Chaos Configuration</h2>
+            <div style={{...styles.sliderContainer, flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem'}}>
+                <label htmlFor="rValue">Chaos Parameter (r): {rValue.toFixed(2)}</label>
+                <p style={{fontSize: '0.8rem', color: 'var(--on-surface-color)', margin: '0 0 0.5rem'}}>Controls the color palette generation. Values between 3.6 and 4.0 are typically chaotic.</p>
+                <input
+                    id="rValue"
+                    type="range"
+                    min="3.5"
+                    max="4.0"
+                    step="0.01"
+                    value={rValue}
+                    onChange={e => setRValue(Number(e.target.value))}
+                    style={styles.slider}
+                    aria-label="Chaos parameter r"
+                />
+            </div>
+             <button onClick={generateChaosPalette} style={{...styles.actionButton, ...styles.secondaryActionButton}}>Regenerate Palette</button>
+
+            <h2 style={styles.sectionTitle}>2. Composition & Framing</h2>
+            <div style={{...styles.sliderContainer, flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem'}}>
+                <label htmlFor="primeCount">Composition Elements (Prime Number):</label>
+                <p style={{fontSize: '0.8rem', color: 'var(--on-surface-color)', margin: '0 0 0.5rem'}}>Guides the placement and scale of core visual elements.</p>
+                <div style={{...styles.sliderContainer, width: '100%'}}>
+                    <button onClick={() => setPrimeCount(p => getPrevPrime(p))} disabled={primeCount <= 2} style={{...styles.actionButton, ...styles.secondaryActionButton}}>&lt;</button>
+                    <span style={{flexGrow: 1, textAlign: 'center', fontSize: '1.2rem', color: 'var(--primary-color)'}}>{primeCount}</span>
+                    <button onClick={() => setPrimeCount(p => getNextPrime(p))} disabled={primeCount >= 97} style={{...styles.actionButton, ...styles.secondaryActionButton}}>&gt;</button>
+                </div>
+            </div>
+            <div style={{display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem'}}>
+                <label htmlFor="goldenRatio" style={{ flexGrow: 1 }}>Use Golden Ratio ($\phi$) Framing:</label>
+                <input
+                    id="goldenRatio"
+                    type="checkbox"
+                    checked={useGoldenRatio}
+                    onChange={e => setUseGoldenRatio(e.target.checked)}
+                    style={{ width: '24px', height: '24px', accentColor: 'var(--primary-color)' }}
+                />
+            </div>
+
+            <h2 style={styles.sectionTitle}>3. Add Guidance (Optional)</h2>
+            <div style={styles.promptContainer}>
+                <textarea
+                    style={{...styles.promptInput, paddingRight: '50px'}}
+                    placeholder="e.g., a vibrant nebula, a city of light, a single eye looking back..."
+                    aria-label="Genesis Engine Guidance"
+                    value={genesisPrompt}
+                    onChange={(e) => setGenesisPrompt(e.target.value)}
+                />
+                 <button onClick={() => handleEnhancePrompt(genesisPrompt, setGenesisPrompt, 'a mathematically generated artwork')} disabled={isEnhancing || !genesisPrompt} style={styles.enhancerButton} className="enhancer-button" title="Enhance prompt with AI">
+                    {isEnhancing ? <div style={styles.miniSpinner}></div> : '✨'}
+                </button>
+            </div>
+
+            <h2 style={{...styles.sectionTitle, marginTop: '1rem'}}>4. Latent Seed Preview</h2>
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1' }}>
+                <canvas ref={mandelbrotRef} width="400" height="400" style={{ border: '1px solid var(--border-color)', width: '100%', background: '#000', position: 'absolute', top: 0, left: 0 }}></canvas>
+                <canvas ref={compositionRef} width="400" height="400" style={{ width: '100%', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}></canvas>
+            </div>
+        </div>
+    );
+});
+
 
 // #endregion
 
+const cropImageToGoldenRatio = (base64Url: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const goldenRatio = 1.618;
+            const originalRatio = img.width / img.height;
+
+            let sx, sy, sWidth, sHeight;
+
+            if (originalRatio > goldenRatio) {
+                // Image is wider than the golden ratio, so crop the sides
+                sHeight = img.height;
+                sWidth = img.height * goldenRatio;
+                sx = (img.width - sWidth) / 2;
+                sy = 0;
+            } else {
+                // Image is taller or equal to the golden ratio, so crop the top and bottom
+                sWidth = img.width;
+                sHeight = img.width / goldenRatio;
+                sx = 0;
+                sy = (img.height - sHeight) / 2;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = sWidth;
+            canvas.height = sHeight;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                return reject(new Error('Could not get canvas context for cropping.'));
+            }
+            ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+            resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = (err) => {
+            reject(new Error('Failed to load image for cropping.'));
+        };
+        img.src = base64Url;
+    });
+};
+
 const App = () => {
-    const [activeTab, setActiveTab] = useState<'blend' | 'swap' | 'inpaint' | 'video' | 'style' | 'audio'>('blend');
+    const [activeTab, setActiveTab] = useState<'blend' | 'swap' | 'inpaint' | 'video' | 'style' | 'audio' | 'genesis'>('blend');
     
     // State for Image Blending
     const initialBlendImage = { src: null, instruction: '', transform: { scale: 1, x: 0, y: 0 } };
@@ -620,6 +875,11 @@ const App = () => {
     const [voiceType, setVoiceType] = useState<string>('Narrator (Male)');
     const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
 
+    // State for Genesis Engine
+    const [genesisPrompt, setGenesisPrompt] = useState<string>('');
+    const [useGoldenRatio, setUseGoldenRatio] = useState(true);
+    const mandelbrotCanvasRef = useRef<HTMLCanvasElement>(null);
+    const compositionCanvasRef = useRef<HTMLCanvasElement>(null);
 
     // General State
     const [loading, setLoading] = useState<boolean>(false);
@@ -1007,6 +1267,8 @@ const App = () => {
         } else if (activeTab === 'audio') {
             setAudioPrompt('');
             setVoiceType('Narrator (Male)');
+        } else if (activeTab === 'genesis') {
+            // Add reset logic for genesis tab here in the future
         }
         setGeneratedImage(null);
         setGeneratedImages([]);
@@ -1025,7 +1287,7 @@ const App = () => {
                 name: generatedImageMetadata.name,
                 tags: generatedImageMetadata.tags,
                 date: new Date(),
-                type: activeTab as 'blend' | 'swap' | 'inpaint' | 'style',
+                type: activeTab as 'blend' | 'swap' | 'inpaint' | 'style' | 'genesis',
                 blendMode: activeTab === 'blend' ? blendMode : null,
                 aspectRatio: activeTab === 'blend' ? aspectRatio : '1:1',
             };
@@ -1131,9 +1393,14 @@ const App = () => {
             if (imagePart?.inlineData) {
                 const base64ImageBytes = imagePart.inlineData.data;
                 const mimeType = imagePart.inlineData.mimeType;
-                const newImage = `data:${mimeType};base64,${base64ImageBytes}`;
-                setGeneratedImage(newImage);
-                setGeneratedImages([newImage]);
+                let finalImage = `data:${mimeType};base64,${base64ImageBytes}`;
+
+                if (useGoldenRatio) {
+                    finalImage = await cropImageToGoldenRatio(finalImage);
+                }
+
+                setGeneratedImage(finalImage);
+                setGeneratedImages([finalImage]);
                 playSound('finish');
             } else {
                 throw getNoImageError(response);
@@ -1509,6 +1776,99 @@ const App = () => {
             case 'audio':
                 await handleAudioGenerate();
                 break;
+            case 'genesis':
+                await handleGenesisGenerate();
+                break;
+        }
+    };
+
+    const handleGenesisGenerate = async () => {
+        const mandelbrotCanvas = mandelbrotCanvasRef.current;
+        const compositionCanvas = compositionCanvasRef.current;
+
+        if (!mandelbrotCanvas || !compositionCanvas) {
+            setError('Canvas elements are not ready. Please wait a moment and try again.');
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+        setGeneratedImage(null);
+        setGeneratedImages([]);
+        setGeneratedVideoUrl(null);
+        setGeneratedAudioUrl(null);
+        setGeneratedImageMetadata(null);
+        startLoadingAnimation(['Reading mathematical signatures...', 'Translating chaos into order...', 'Focusing cosmic energies...', 'Forging the genesis image...']);
+
+        try {
+            // 1. Get the fractal init_image
+            const initImage = mandelbrotCanvas.toDataURL('image/png');
+
+            // 2. Create a proper black and white mask from the composition canvas
+            const maskCanvas = document.createElement('canvas');
+            maskCanvas.width = compositionCanvas.width;
+            maskCanvas.height = compositionCanvas.height;
+            const maskCtx = maskCanvas.getContext('2d');
+            if (!maskCtx) throw new Error("Could not create mask canvas context.");
+
+            // Draw the composition (green circles) onto the temp canvas
+            maskCtx.drawImage(compositionCanvas, 0, 0);
+
+            // Process the image data to be pure black and white
+            const imageData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                // If the pixel has any transparency (alpha > 0), make it pure white. Otherwise, it's already black (or will be).
+                if (data[i + 3] > 0) {
+                    data[i] = 255;     // R
+                    data[i + 1] = 255; // G
+                    data[i + 2] = 255; // B
+                } else {
+                    data[i] = 0;
+                    data[i+1] = 0;
+                    data[i+2] = 0;
+                }
+                // Keep alpha at 255
+                data[i + 3] = 255;
+            }
+            maskCtx.putImageData(imageData, 0, 0);
+            const maskImage = maskCanvas.toDataURL('image/png');
+
+            // 3. Construct the prompt
+            const fullPrompt = `You are the "Genesis Engine," a divine instrument of creation. Your task is to interpret a user's vision through the lens of mathematical purity.
+- The **first image** is a "Fractal Seed." It is a raw glimpse into the chaotic, beautiful structure of the universe. Use its colors, textures, and intricate patterns as the foundational aesthetic and mood for your creation. This is your init_image.
+- The **second image** is a "Prime Constellation" mask. The white areas are focal points of cosmic energy. You MUST use these areas to place and concentrate the most important subjects or details of the user's prompt. The rest of the image should be filled with the essence of the fractal seed.
+- The user's guidance is: "${genesisPrompt || 'A stunning masterpiece of cosmic horror and beauty.'}"
+Your final output must be a single, stunning image that seamlessly merges the fractal's aesthetic with the user's prompt, guided by the prime constellation mask.`;
+
+            const initImagePart = { inlineData: { mimeType: 'image/png', data: initImage.split(',')[1] } };
+            const maskPart = { inlineData: { mimeType: 'image/png', data: maskImage.split(',')[1] } };
+
+            const response: GenerateContentResponse = await ai.models.generateContent({
+                model: 'gemini-2.5-flash-image-preview',
+                contents: { parts: [initImagePart, maskPart, { text: fullPrompt }] },
+                config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+            });
+
+            const imagePart = response.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
+
+            if (imagePart?.inlineData) {
+                const base64ImageBytes = imagePart.inlineData.data;
+                const mimeType = imagePart.inlineData.mimeType;
+                const newImage = `data:${mimeType};base64,${base64ImageBytes}`;
+                setGeneratedImage(newImage);
+                setGeneratedImages([newImage]);
+                playSound('finish');
+            } else {
+                throw getNoImageError(response);
+            }
+
+        } catch(err) {
+            playSound('error');
+            console.error(err);
+            setError(err instanceof Error ? err.message : 'An unknown error occurred during Genesis Engine generation.');
+        } finally {
+            stopLoadingAnimation();
         }
     };
 
@@ -1529,6 +1889,7 @@ const App = () => {
     const isVideoFormComplete = videoPrompt || videoImages.some(img => img);
     const isStyleTransferFormComplete = styleContentImage && styleStyleImage;
     const isAudioFormComplete = !!audioPrompt;
+    const isGenesisFormComplete = true; // Placeholder
 
     const baseButton: React.CSSProperties = { fontFamily: "'Orbitron', sans-serif", textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.3s ease', padding: '0.75rem 1.5rem', fontSize: '1rem', fontWeight: 700, borderRadius: '0px' };
 
@@ -1710,6 +2071,7 @@ const App = () => {
                         <button style={{...styles.tabButton, ...(activeTab === 'style' ? styles.tabButtonActive : {})}} onClick={() => setActiveTab('style')}>Style Transfer</button>
                         <button style={{...styles.tabButton, ...(activeTab === 'video' ? styles.tabButtonActive : {})}} onClick={() => setActiveTab('video')}>Video Gen</button>
                         <button style={{...styles.tabButton, ...(activeTab === 'audio' ? styles.tabButtonActive : {})}} onClick={() => setActiveTab('audio')}>Audio Gen</button>
+                        <button style={{...styles.tabButton, ...(activeTab === 'genesis' ? styles.tabButtonActive : {})}} onClick={() => setActiveTab('genesis')}>Genesis Engine</button>
                     </div>
 
                     <div key={activeTab} className="tab-content">
@@ -1719,6 +2081,7 @@ const App = () => {
                        {activeTab === 'video' && <VideoControls {...{styles, videoImages, handleVideoImageUpload, handleRemoveVideoImage, handleAddVideoImageSlot, videoFaceRefImage, setVideoFaceRefImage, videoStyleImage, setVideoStyleImage, videoBlendMode, setVideoBlendMode, BLEND_MODES, videoPrompt, setVideoPrompt, handleEnhancePrompt, isEnhancing, videoDialogue, setVideoDialogue}} />}
                        {activeTab === 'style' && <StyleTransferControls {...{styles, styleContentImage, handleStyleImageUpload, setStyleContentImage, styleStyleImage, setStyleStyleImage, styleStrength, setStyleStrength, stylePrompt, setStylePrompt, handleEnhancePrompt, isEnhancing}} />}
                        {activeTab === 'audio' && <AudioControls {...{styles, audioPrompt, setAudioPrompt, handleEnhancePrompt, isEnhancing, voiceType, setVoiceType, VOICE_TYPES}} />}
+                       {activeTab === 'genesis' && <GenesisEngineControls ref={{ mandelbrotRef: mandelbrotCanvasRef, compositionRef: compositionCanvasRef }} {...{styles, genesisPrompt, setGenesisPrompt, handleEnhancePrompt, isEnhancing, useGoldenRatio, setUseGoldenRatio}} />}
                     </div>
 
                     <div style={styles.actionButtonsContainer}>
@@ -1732,7 +2095,8 @@ const App = () => {
                                     (activeTab === 'inpaint' && !isInpaintFormComplete) ||
                                     (activeTab === 'video' && !isVideoFormComplete) ||
                                     (activeTab === 'style' && !isStyleTransferFormComplete) ||
-                                    (activeTab === 'audio' && !isAudioFormComplete)
+                                    (activeTab === 'audio' && !isAudioFormComplete) ||
+                                    (activeTab === 'genesis' && !isGenesisFormComplete)
                                 ) ? styles.generateButtonDisabled : {})
                             }}
                             className="generate-button"
@@ -1744,7 +2108,8 @@ const App = () => {
                                 (activeTab === 'inpaint' && !isInpaintFormComplete) ||
                                 (activeTab === 'video' && !isVideoFormComplete) ||
                                 (activeTab === 'style' && !isStyleTransferFormComplete) ||
-                                (activeTab === 'audio' && !isAudioFormComplete)
+                                (activeTab === 'audio' && !isAudioFormComplete) ||
+                                (activeTab === 'genesis' && !isGenesisFormComplete)
                             }
                          >
                             {loading && activeTab !== 'video' && <div style={{...styles.miniSpinner, width: '20px', height: '20px', borderTopColor: '#000'}}></div>}
