@@ -563,12 +563,55 @@ const AudioControls = ({ styles, audioPrompt, setAudioPrompt, handleEnhancePromp
     </div>
 );
 
+const BackendControls = ({ styles, backend, setBackend, ollamaServerUrl, setOllamaServerUrl, localModel, setLocalModel }) => (
+    <div style={{display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
+        <h2 style={styles.sectionTitle}>1. Select Generation Backend</h2>
+        <div style={styles.blendModes}>
+            <div onClick={() => setBackend('cloud')} style={{...styles.blendCard, ...(backend === 'cloud' ? styles.blendCardSelected : {})}} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setBackend('cloud')} aria-pressed={backend === 'cloud'} className="blend-card">
+                <h4 style={styles.blendCardTitle}>Cloud</h4>
+                <p style={styles.blendCardDescription}>Use powerful, cutting-edge models from Google AI.</p>
+            </div>
+            <div onClick={() => setBackend('local')} style={{...styles.blendCard, ...(backend === 'local' ? styles.blendCardSelected : {})}} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setBackend('local')} aria-pressed={backend === 'local'} className="blend-card">
+                <h4 style={styles.blendCardTitle}>Local</h4>
+                <p style={styles.blendCardDescription}>Use a local Ollama server for privacy and customization.</p>
+            </div>
+        </div>
+        {backend === 'local' && (
+            <div style={{animation: 'fadeIn 0.5s ease'}}>
+                <h2 style={styles.sectionTitle}>2. Local Server Configuration</h2>
+                <p style={{marginTop: '-1rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--on-surface-color)'}}>
+                    Make sure you have <a href="https://ollama.com/" target="_blank" rel="noopener noreferrer" style={{color: 'var(--primary-color)'}}>Ollama</a> installed and running.
+                </p>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                    <div>
+                        <label htmlFor="ollamaUrl" style={{display: 'block', marginBottom: '0.5rem'}}>Ollama Server URL</label>
+                        <input id="ollamaUrl" type="text" value={ollamaServerUrl} onChange={(e) => setOllamaServerUrl(e.target.value)} style={styles.promptInput} />
+                    </div>
+                    <div>
+                        <label htmlFor="localModel" style={{display: 'block', marginBottom: '0.5rem'}}>Local Model</label>
+                        <input id="localModel" type="text" value={localModel} onChange={(e) => setLocalModel(e.target.value)} style={styles.promptInput} />
+                        <p style={{marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--on-surface-color)'}}>
+                            e.g., `llava` for multimodal, `stable-diffusion` for images.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        )}
+    </div>
+);
+
 
 // #endregion
 
 const App = () => {
-    const [activeTab, setActiveTab] = useState<'blend' | 'swap' | 'inpaint' | 'video' | 'style' | 'audio'>('blend');
+    const [activeTab, setActiveTab] = useState<'blend' | 'swap' | 'inpaint' | 'video' | 'style' | 'audio' | 'backend'>('blend');
     
+    // State for Backend Configuration
+    const [backend, setBackend] = useState<'cloud' | 'local'>('cloud');
+    const [ollamaServerUrl, setOllamaServerUrl] = useState<string>('http://localhost:11434');
+    const [localModel, setLocalModel] = useState<string>('llava');
+
+
     // State for Image Blending
     const initialBlendImage = { src: null, instruction: '', transform: { scale: 1, x: 0, y: 0 } };
     const [blendImages, setBlendImages] = useState<{ src: string | null; instruction: string; transform: ImageTransform }[]>([
@@ -1710,6 +1753,7 @@ const App = () => {
                         <button style={{...styles.tabButton, ...(activeTab === 'style' ? styles.tabButtonActive : {})}} onClick={() => setActiveTab('style')}>Style Transfer</button>
                         <button style={{...styles.tabButton, ...(activeTab === 'video' ? styles.tabButtonActive : {})}} onClick={() => setActiveTab('video')}>Video Gen</button>
                         <button style={{...styles.tabButton, ...(activeTab === 'audio' ? styles.tabButtonActive : {})}} onClick={() => setActiveTab('audio')}>Audio Gen</button>
+                        <button style={{...styles.tabButton, ...(activeTab === 'backend' ? styles.tabButtonActive : {})}} onClick={() => setActiveTab('backend')}>Backend</button>
                     </div>
 
                     <div key={activeTab} className="tab-content">
@@ -1719,6 +1763,7 @@ const App = () => {
                        {activeTab === 'video' && <VideoControls {...{styles, videoImages, handleVideoImageUpload, handleRemoveVideoImage, handleAddVideoImageSlot, videoFaceRefImage, setVideoFaceRefImage, videoStyleImage, setVideoStyleImage, videoBlendMode, setVideoBlendMode, BLEND_MODES, videoPrompt, setVideoPrompt, handleEnhancePrompt, isEnhancing, videoDialogue, setVideoDialogue}} />}
                        {activeTab === 'style' && <StyleTransferControls {...{styles, styleContentImage, handleStyleImageUpload, setStyleContentImage, styleStyleImage, setStyleStyleImage, styleStrength, setStyleStrength, stylePrompt, setStylePrompt, handleEnhancePrompt, isEnhancing}} />}
                        {activeTab === 'audio' && <AudioControls {...{styles, audioPrompt, setAudioPrompt, handleEnhancePrompt, isEnhancing, voiceType, setVoiceType, VOICE_TYPES}} />}
+                       {activeTab === 'backend' && <BackendControls {...{styles, backend, setBackend, ollamaServerUrl, setOllamaServerUrl, localModel, setLocalModel}} />}
                     </div>
 
                     <div style={styles.actionButtonsContainer}>
