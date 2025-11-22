@@ -26,7 +26,7 @@ export interface BenchmarkMetrics {
     };
     usability: {
         promptAdherence: number; // 0-1 score
-        controlability: number; // 0-1 score
+        controllability: number; // 0-1 score
         consistency: number; // 0-1 score
         versatility: number; // 0-1 score
     };
@@ -143,27 +143,27 @@ export class SOTAComparisonFramework {
             'DALL-E 3': {
                 quality: { fid: 12.5, is: 45.2, lpips: 0.15, clipScore: 0.87 },
                 performance: { avgLatency: 8000, throughput: 0.125, memory: 16384, energyEfficiency: 2.5 },
-                usability: { promptAdherence: 0.92, controlability: 0.78, consistency: 0.85, versatility: 0.88 }
+                usability: { promptAdherence: 0.92, controllability: 0.78, consistency: 0.85, versatility: 0.88 }
             },
             'Midjourney': {
                 quality: { fid: 11.8, is: 48.5, lpips: 0.12, clipScore: 0.89 },
                 performance: { avgLatency: 10000, throughput: 0.1, memory: 20480, energyEfficiency: 2.0 },
-                usability: { promptAdherence: 0.88, controlability: 0.82, consistency: 0.90, versatility: 0.92 }
+                usability: { promptAdherence: 0.88, controllability: 0.82, consistency: 0.90, versatility: 0.92 }
             },
             'Stable Diffusion XL': {
                 quality: { fid: 14.2, is: 42.0, lpips: 0.18, clipScore: 0.84 },
                 performance: { avgLatency: 6000, throughput: 0.167, memory: 8192, energyEfficiency: 4.0 },
-                usability: { promptAdherence: 0.82, controlability: 0.85, consistency: 0.80, versatility: 0.90 }
+                usability: { promptAdherence: 0.82, controllability: 0.85, consistency: 0.80, versatility: 0.90 }
             },
             'Imagen 3': {
                 quality: { fid: 11.2, is: 50.1, lpips: 0.11, clipScore: 0.91 },
                 performance: { avgLatency: 9000, throughput: 0.111, memory: 18432, energyEfficiency: 2.2 },
-                usability: { promptAdherence: 0.94, controlability: 0.80, consistency: 0.88, versatility: 0.86 }
+                usability: { promptAdherence: 0.94, controllability: 0.80, consistency: 0.88, versatility: 0.86 }
             },
             'Firefly': {
                 quality: { fid: 13.0, is: 44.5, lpips: 0.16, clipScore: 0.85 },
                 performance: { avgLatency: 7000, throughput: 0.143, memory: 12288, energyEfficiency: 3.0 },
-                usability: { promptAdherence: 0.86, controlability: 0.88, consistency: 0.84, versatility: 0.85 }
+                usability: { promptAdherence: 0.86, controllability: 0.88, consistency: 0.84, versatility: 0.85 }
             }
         };
 
@@ -219,7 +219,7 @@ export class SOTAComparisonFramework {
             },
             usability: {
                 promptAdherence: 0.91, // Strong due to fractal attention
-                controlability: 0.92, // Enhanced by plugin system
+                controllability: 0.92, // Enhanced by plugin system
                 consistency: 0.89, // Health monitoring ensures consistency
                 versatility: 0.95 // Highest due to adaptive layers and plugins
             }
@@ -250,7 +250,7 @@ export class SOTAComparisonFramework {
 
         const usabilityScore = (
             metrics.usability.promptAdherence * 0.3 +
-            metrics.usability.controlability * 0.25 +
+            metrics.usability.controllability * 0.25 +
             metrics.usability.consistency * 0.25 +
             metrics.usability.versatility * 0.2
         );
@@ -347,7 +347,7 @@ export class SOTAComparisonFramework {
             
             report += `**Usability Metrics:**\n`;
             report += `- Prompt Adherence: ${(model.metrics.usability.promptAdherence * 100).toFixed(0)}%\n`;
-            report += `- Controlability: ${(model.metrics.usability.controlability * 100).toFixed(0)}%\n`;
+            report += `- Controllability: ${(model.metrics.usability.controllability * 100).toFixed(0)}%\n`;
             report += `- Consistency: ${(model.metrics.usability.consistency * 100).toFixed(0)}%\n`;
             report += `- Versatility: ${(model.metrics.usability.versatility * 100).toFixed(0)}%\n\n`;
         }
