@@ -18,12 +18,13 @@ const config: CapacitorConfig = {
   },
   android: {
     buildOptions: {
-      // Note: For production builds, set these via environment variables
-      // or configure in local gradle.properties file
-      keystorePath: process.env.ANDROID_KEYSTORE_PATH,
-      keystorePassword: process.env.ANDROID_KEYSTORE_PASSWORD,
-      keystoreAlias: process.env.ANDROID_KEY_ALIAS,
-      keystoreAliasPassword: process.env.ANDROID_KEY_PASSWORD,
+      // Note: For production signed builds, set these via environment variables:
+      // ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+      // For unsigned builds (development), these can remain undefined
+      keystorePath: process.env.ANDROID_KEYSTORE_PATH || undefined,
+      keystorePassword: process.env.ANDROID_KEYSTORE_PASSWORD || undefined,
+      keystoreAlias: process.env.ANDROID_KEY_ALIAS || undefined,
+      keystoreAliasPassword: process.env.ANDROID_KEY_PASSWORD || undefined,
       releaseType: 'APK'
     }
   },

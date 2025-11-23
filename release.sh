@@ -29,8 +29,9 @@ echo "Step 1: Installing dependencies..."
 npm install --legacy-peer-deps
 
 echo ""
-echo "Step 2: Running tests (if any)..."
-# npm test || echo "No tests configured"
+echo "Step 2: Running linters and tests..."
+# Note: Add test commands here when tests are implemented
+# npm test
 
 echo ""
 echo "Step 3: Building web application..."

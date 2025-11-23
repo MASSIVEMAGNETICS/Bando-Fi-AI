@@ -93,9 +93,14 @@ jobs:
 
       - name: Build Android APK
         run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleRelease
+          if [ -d "android" ] && [ -f "android/gradlew" ]; then
+            cd android
+            chmod +x gradlew
+            ./gradlew assembleRelease
+          else
+            echo "Android directory not found. Skipping build."
+            exit 1
+          fi
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
@@ -159,7 +164,16 @@ jobs:
           files: |
             windows-build/*
             android-apk/*
+            web-build/**/*
           draft: false
           prerelease: false
+          body: |
+            ## Bando-Fi AI Release
+            
+            Multi-platform build including:
+            - Windows Desktop Application (.exe)
+            - Android APK
+            - Web Application (deploy dist/ directory)
+            - iOS build (available as workflow artifact)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
