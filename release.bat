@@ -31,12 +31,17 @@ echo [OK] Mobile platforms synced
 echo.
 echo Step 5: Building Android APK...
 cd android
-call gradlew.bat assembleRelease
-cd ..
-if %errorlevel% neq 0 (
-    echo [WARNING] Android build failed or Java not available
+if exist gradlew.bat (
+    call gradlew.bat assembleRelease
+    cd ..
+    if %errorlevel% neq 0 (
+        echo [WARNING] Android build failed or Java not available
+    ) else (
+        echo [OK] Android APK build complete
+    )
 ) else (
-    echo [OK] Android APK build complete
+    cd ..
+    echo [WARNING] Android project not found. Run 'npx cap add android' first.
 )
 
 echo.

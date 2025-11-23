@@ -54,8 +54,15 @@ echo "✓ Mobile platforms synced"
 echo ""
 echo "Step 6: Building Android APK..."
 if command -v java &> /dev/null; then
-    cd android && ./gradlew assembleRelease && cd ..
-    echo "✓ Android APK build complete"
+    if [ -d "android" ] && [ -f "android/gradlew" ]; then
+        cd android
+        chmod +x gradlew
+        ./gradlew assembleRelease
+        cd ..
+        echo "✓ Android APK build complete"
+    else
+        echo "⚠ Skipping Android build (Android project not found. Run 'npx cap add android' first)"
+    fi
 else
     echo "⚠ Skipping Android build (Java not available)"
 fi

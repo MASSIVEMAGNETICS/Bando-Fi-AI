@@ -61,6 +61,15 @@ The production build will be created in the `dist/` directory.
 - Optimized bundle splitting
 - Asset caching strategies
 
+### PWA Icons
+
+Before deploying, add PWA icons to the `public/` directory:
+- `pwa-192x192.png` - 192x192 icon
+- `pwa-512x512.png` - 512x512 icon
+- `pwa-512x512-maskable.png` - 512x512 maskable icon (with safe zone)
+
+For maskable icons, ensure important content is within the safe zone (center 80%).
+
 ### Deployment
 
 Deploy the contents of the `dist/` directory to any static hosting service:
