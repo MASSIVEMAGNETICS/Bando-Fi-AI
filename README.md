@@ -1,4 +1,5 @@
 # Bando-Fi AI
+<img width="1551" height="858" alt="image" src="https://github.com/user-attachments/assets/6465a0bc-91de-4803-86d2-4d9b85417e01" />
 
 An AI-powered application for creative image and video generation, featuring advanced next-generation image generation capabilities.
 
