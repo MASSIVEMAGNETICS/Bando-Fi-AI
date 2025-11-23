@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  bando-fi-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bando-fi-ai
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - bando-fi-network
+
+networks:
+  bando-fi-network:
+    driver: bridge
