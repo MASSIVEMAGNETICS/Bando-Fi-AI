@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Build outputs
+release
+out
+
+# Electron
+electron-builder.yml
+
+# Mobile platforms
+android
+ios
+.capacitor
+
+# Environment
+.env
+.env.local
+.env.*.local
